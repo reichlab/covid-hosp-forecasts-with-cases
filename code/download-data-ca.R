@@ -24,8 +24,7 @@ download_ca_data <- function(json_link){
   write_csv(ca_report_date, file = paste0("csv-data/CA-DPH-reportdate-covid-", ca_dat$meta$PUBLISHED_DATE,".csv"))
 }
 
-ca_json_links <- read_csv("csv-data/CA-json-links.csv") %>%
-  filter(date < "2022-04-19")
+ca_json_links <- read_csv("csv-data/CA-json-links.csv") 
 
 for (i in 1:nrow(ca_json_links)){
   download_ca_data(ca_json_links$file_link[i])
