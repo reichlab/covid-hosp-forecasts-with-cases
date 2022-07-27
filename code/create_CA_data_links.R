@@ -1,3 +1,4 @@
+library(tidyverse)
 links <- data.frame()
 head <- NULL
 query_base_file <- "data/dashboard/confirmed-cases/california.json"
