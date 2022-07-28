@@ -209,6 +209,10 @@ def load_data(as_of=None,
         # else:
         #     subset_as_ofs = [ao for ao in as_ofs if ao <= as_of]
         #     case_as_of = max(subset_as_ofs)
+
+        # for MA test date cases, latest available data file is off by one
+        if state == 'ma' and as_of == '2022-07-22':
+            as_of = '2022-07-21'
         
         if state == 'ma':
             case_df_path = 'csv-data/MA-DPH-csvdata-covid-' + as_of + '.csv'
@@ -431,7 +435,7 @@ if __name__ == "__main__":
         # load data
         # as_of is set to the value of the finalized data date
         if data_timing == 'final':
-            as_of = '' # TODO
+            as_of = '2022-07-22'
         else:
             as_of = forecast_date
         
