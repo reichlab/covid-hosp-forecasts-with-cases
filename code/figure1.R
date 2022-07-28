@@ -7,22 +7,23 @@ library(forecast)
 library(broom)
 library(cowplot)
 
-# use all data as of 2022-04-29
-as_of_date <- as.Date("2022-04-29")
+# use all data as of 2022-07-22
+as_of_date <- as.Date("2022-07-22")
+ma_dph_as_of_date <- as_of_date - 1
 analysis_start_date <- as.Date("2020-10-01")
 hosp_start_date <- as.Date("2020-08-01")
 case_start_date <- as.Date("2020-03-01")
-case_end_date <- as.Date("2022-04-28")
+case_end_date <- as_of_date - 1
 validation_date <- as.Date("2020-12-07")
 validation_test_split <- as.Date("2021-06-07")
 
-ma_case_test <- readr::read_csv("csv-data/MA-DPH-csvdata-covid-2022-04-28.csv") %>%
+ma_case_test <- readr::read_csv(paste0("csv-data/MA-DPH-csvdata-covid-", ma_dph_as_of_date, ".csv")) %>%
   dplyr::select(target_end_date = test_date, `test-date cases` = new_positive) %>%
   dplyr::filter(target_end_date >= analysis_start_date, target_end_date <= case_end_date) 
-ca_case_test <- readr::read_csv("csv-data/CA-DPH-testdate-covid-2022-04-29.csv") %>%
+ca_case_test <- readr::read_csv(paste0("csv-data/CA-DPH-testdate-covid-", as_of_date, ".csv")) %>%
   dplyr::select(target_end_date = test_date, `test-date cases` = new_positive) %>%
   dplyr::filter(target_end_date >= analysis_start_date, target_end_date <= case_end_date)
-ca_dph_case_report <- readr::read_csv("csv-data/CA-DPH-reportdate-covid-2022-04-29.csv") %>%
+ca_dph_case_report <- readr::read_csv(paste0("csv-data/CA-DPH-reportdate-covid-", as_of_date, ".csv")) %>%
   dplyr::select(target_end_date = report_date, `CA DPH report-date cases` = new_positive) %>%
   dplyr::filter(target_end_date >= analysis_start_date, target_end_date <= case_end_date)
 ma_case_report <- covidData::load_data(
@@ -218,7 +219,7 @@ p1 <- ggpubr::ggarrange(p1_1_ma, ggplot() + theme_void(),p_growth_ma, ggplot() +
                         labels = c("A","", "B","", "C", "","D"),
                         ncol =1,common.legend = TRUE, legend="bottom",
                         align = "hv")
-ggsave('fig1_raw_CA_DPH.jpeg',dpi=300)
+ggsave('figures/fig1_raw_CA_DPH.jpeg',dpi=300)
 
 ####figure for smoothed data####
 ma_case_test<- ma_case_test %>%
@@ -467,4 +468,4 @@ p1 <- ggpubr::ggarrange(p1_1_ma, ggplot() + theme_void(),p_growth_ma, ggplot() +
                         heights = c(1, 0.02,1, 0.02,1, 0.02,1.3),
                         ncol =1,common.legend = TRUE, legend="bottom",
                         align = "hv")
-ggsave('fig1_smooth_CA_DPH.jpeg',dpi=300)
+ggsave('figures/fig1_smooth_CA_DPH.jpeg',dpi=300)
