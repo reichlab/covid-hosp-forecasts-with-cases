@@ -54,25 +54,55 @@ if __name__ == "__main__":
       last_forecast_date = date.fromisoformat("2021-06-07")
     elif args.phase == 'test':
       first_forecast_date = date.fromisoformat("2021-06-14")
-      last_forecast_date = date.fromisoformat("2022-04-25")
+      last_forecast_date = date.fromisoformat("2022-05-30")
 
     num_forecast_dates = (last_forecast_date - first_forecast_date).days // 7 + 1
     forecast_dates = [str(first_forecast_date + i * timedelta(days=7)) \
         for i in range(num_forecast_dates)]
 
     # all combinations of forecast date and case type
-    variations = expand_grid({
-      'state': ['ca', 'ma'],
-      'forecast_date': forecast_dates,
-      'case_timing': ['final'],
-      # 'case_type': ['none']
-      'case_type': ['none', 'report', 'test']
-    })
+    variations = [
+      # no case data used
+      expand_grid({
+        'state': ['ca', 'ma'],
+        'forecast_date': forecast_dates,
+        'case_type': ['none',],
+        'case_source': ['jhu-csse'],
+        'smooth_case': ['False']
+      }),
+      # report date cases in CA: both dph and jhu-csse
+      expand_grid({
+        'state': ['ca'],
+        'forecast_date': forecast_dates,
+        'case_type': ['report'],
+        'case_source': ['jhu-csse', 'dph'],
+        'smooth_case': ['True', 'False']
+      }),
+      # report date cases in MA: jhu-csse only
+      expand_grid({
+        'state': ['ma'],
+        'forecast_date': forecast_dates,
+        'case_type': ['report'],
+        'case_source': ['jhu-csse'],
+        'smooth_case': ['True', 'False']
+      }),
+      # test date cases: both states, dph only
+      expand_grid({
+        'state': ['ca', 'ma'],
+        'forecast_date': forecast_dates,
+        'case_type': ['test'],
+        'case_source': ['dph'],
+        'smooth_case': ['True', 'False']
+      })
+    ]
+    variations = pd.concat(variations, axis=0) \
+      .reset_index() \
+      .drop(['index'], axis=1)
 
     # list of python commands for each variation
     commands = [
       ' '.join(
-        ['python3 code/fit-sarix-models/run-all-models-one-state-date-case-type.py'] + \
+        ['python3 code/run-all-models-one-state-date-case-type.py'] + \
           ['--' + arg_name + ' ' + str(variations[arg_name][i]) \
             for arg_name in variations.columns]) \
         for i in range(variations.shape[0])

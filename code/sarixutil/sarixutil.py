@@ -293,3 +293,75 @@ def load_data(as_of=None,
     
     return df
 
+
+
+def construct_forecast_df(location, forecast_date, pred_qs, q_levels, base_target):
+    # format predictions for one target variable as a data frame with required columns
+    horizons_str = [str(i + 1) for i in range(28)]
+    preds_df = pd.DataFrame(pred_qs, columns=horizons_str)
+    preds_df['forecast_date'] = forecast_date
+    preds_df['location'] = location
+    preds_df['quantile'] = q_levels
+    preds_df = pd.melt(preds_df,
+                       id_vars=['forecast_date', 'location', 'quantile'],
+                       var_name='horizon')
+    preds_df['target_end_date'] = pd.to_datetime(preds_df['forecast_date']).values + \
+        pd.to_timedelta(preds_df['horizon'].astype(int), 'days')
+    preds_df['base_target'] = base_target
+    preds_df['target'] = preds_df['horizon'] + preds_df['base_target']
+    preds_df['type'] = 'quantile'
+    preds_df = preds_df[['location', 'forecast_date', 'target',
+                         'target_end_date', 'type', 'quantile', 'value']]
+    return preds_df
+
+
+def save_forecast_file(state, forecast_date, hosp_pred_qs, case_pred_qs, q_levels, model_name):
+    if state == 'ma':
+        location = '25'
+    elif state == 'ca':
+        location = '06'
+    else:
+        raise ValueError("Only support states ma and ca")
+    
+    hosp_pred_df = construct_forecast_df(location,
+                                         forecast_date,
+                                         hosp_pred_qs,
+                                         q_levels,
+                                         ' day ahead inc hosp')
+    if case_pred_qs is None:
+        preds_df = hosp_pred_df
+    else:
+        case_pred_df = construct_forecast_df(location,
+                                             forecast_date,
+                                             case_pred_qs,
+                                             q_levels,
+                                             ' day ahead inc case')
+        preds_df = pd.concat([hosp_pred_df, case_pred_df], axis=0)
+    
+    # save predictions
+    model_dir = Path("forecasts") / state / model_name
+    model_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
+    file_path = model_dir / f"{forecast_date}-{model_name}.csv"
+    preds_df.to_csv(file_path, index=False)
+
+
+def save_fit_samples(state, forecast_date, param_samples, pred_samples, model_name):
+    model_dir = Path("fit_samples") / state / model_name
+    model_dir.mkdir(mode=0o775, parents=True, exist_ok=True)
+    file_path = model_dir / f"{forecast_date}-{model_name}.npz"
+    np.savez_compressed(file_path,
+                        param_samples=param_samples,
+                        pred_samples=pred_samples)
+
+
+def build_model_name(case_type, case_source, smooth_case, p, d, P, D):
+    return f"{case_type}_" + \
+        f"{case_source}_" +\
+        f"smooth_case_{smooth_case}_" +\
+        "SARIX_" +\
+        f"p_{p}_" +\
+        f"d_{d}_" +\
+        f"P_{P}_" +\
+        f"D_{D}"
+
+
