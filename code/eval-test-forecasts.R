@@ -18,12 +18,8 @@ parse_model_names <- function(model) {
   ))
 }
 
+# load forecasts
 inc_hosp_targets <- paste(0:130, "day ahead inc hosp")
-
-models <- list.dirs(
-  "forecasts",
-  full.names = FALSE,
-  recursive = FALSE)
 
 forecasts <- dplyr::bind_rows(
   load_forecasts(
@@ -71,7 +67,7 @@ hub_forecasts <- load_forecasts(
   as_of = NULL,
   hub = c("US")
 )
-# combined_forecasts <- forecasts
+
 combined_forecasts <- dplyr::bind_rows(forecasts, hub_forecasts)
 
 combined_forecasts %>%
@@ -79,7 +75,8 @@ combined_forecasts %>%
   dplyr::count(location, model, forecast_date) %>%
   as.data.frame()
 
-manual_truth_data <- dplyr::bind_rows(
+# load truth data
+truth_data <- dplyr::bind_rows(
   readr::read_csv("csv-data/CA-JHU-reportdate-hospitalizations-2022-07-22.csv") %>%
     dplyr::transmute(
       location = "06", target_end_date = date, value = inc,
@@ -98,9 +95,10 @@ manual_truth_data <- dplyr::bind_rows(
     ),
 )
 
-truth_data <- manual_truth_data %>%
+truth_data <- truth_data %>%
   dplyr::filter(target_end_date >= "2020-10-01")
 
+# calculate scores
 scores <- covidHubUtils::score_forecasts(
   combined_forecasts,
   truth_data,
@@ -125,29 +123,6 @@ mean_scores <- dplyr::bind_cols(
   as.data.frame()
 mean_scores
 
-# scores <- covidHubUtils::score_forecasts(
-#   combined_forecasts,
-#   truth_data,
-#   use_median_as_point = TRUE)
-
-# scores <- dplyr::bind_cols(
-#   scores,
-#   parse_model_names(scores$model)
-# )
-
-# mean_scores <- scores %>%
-#   group_by(model) %>%
-#   summarize(wis = mean(wis),
-#             mae = mean(abs_error),
-#             coverage_95 = mean(coverage_95)) %>%
-#   arrange(wis)
-
-# mean_scores <- dplyr::bind_cols(
-#   mean_scores,
-#   parse_model_names(mean_scores$model)
-# ) %>%
-#   as.data.frame()
-# mean_scores
 
 # plot the forecasts
 pdf("figures/pred_dists_by_model.pdf", height = 12, width = 16)
@@ -277,7 +252,7 @@ mean_scores_by_forecast_date <- scores %>%
   dplyr::mutate(
     model_brief = dplyr::case_when(
       model %in% c("COVIDhub-4_week_ensemble", "COVIDhub-baseline") ~ model,
-      TRUE ~ paste0(case_type, "_smooth_case_", smooth_case)
+      TRUE ~ paste0(case_type, "_", case_source, "_smooth_case_", smooth_case)
     )
   ) %>%
   dplyr::group_by(model_brief, forecast_date, location) %>%

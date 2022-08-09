@@ -18,36 +18,8 @@ parse_model_names <- function(model) {
   ))
 }
 
+# load forecasts
 inc_hosp_targets <- paste(0:130, "day ahead inc hosp")
-
-ca_models <- list.dirs(
-  "forecasts/ca",
-  full.names = FALSE,
-  recursive = FALSE)
-
-ma_models <- list.dirs(
-  "forecasts/ma",
-  full.names = FALSE,
-  recursive = FALSE)
-
-models <- unique(c(ca_models, ma_models))
-
-orig_forecasts <- load_forecasts(
-    models = "none_final_smooth_case_False_SARIX_p_1_d_0_P_1_D_1",
-    dates = seq.Date(from = as.Date("2020-12-07"),
-                    to = as.Date("2021-06-07"),
-                    by = 7),
-    date_window_size = 6,
-    locations = c("06", "25"),
-    types = c("point", "quantile"),
-    targets = inc_hosp_targets,
-    source = "local_hub_repo",
-    hub_repo_path = "old-forecasts/ma",
-    data_processed_subpath = "",
-    verbose = FALSE,
-    as_of = NULL,
-    hub = c("US")
-  )
 
 forecasts <- dplyr::bind_rows(
   load_forecasts(
@@ -95,12 +67,6 @@ hub_forecasts <- load_forecasts(
   as_of = NULL,
   hub = c("US")
 )
-# combined_forecasts <- forecasts
-
-forecasts <- dplyr::filter(
-  forecasts,
-  !(grepl("test_jhu-csse", model) & location == "25")
-)
 
 combined_forecasts <- dplyr::bind_rows(forecasts, hub_forecasts)
 
@@ -110,54 +76,8 @@ combined_forecasts %>%
   tidyr::pivot_wider(names_from = "location", values_from = "n") %>%
   as.data.frame()
 
-# forecasts <- covidHubUtils::align_forecasts(forecasts)
-
-# extract_variation <- function(model_name, var_name) {
-#   ind <- regexpr(var_name, model_name) + nchar(var_name) + 1
-#   model_substr <- substr(model_name, ind, nchar(model_name))
-#   ind <- regexpr("_", model_substr)
-#   substr(model_substr, 1, ifelse(ind == -1, nchar(model_substr), ind - 1))
-# }
-
-truth_data <- load_truth(
-  as_of = "2022-07-22",
-  truth_source = "HealthData",
-  target_variable = "inc hosp",
-  locations = c("06", "25"),
-  data_location = "covidData",
-  hub = "US"
-)
-
-old_truth_data <- load_truth(
-  as_of = "2022-04-29",
-  truth_source = "HealthData",
-  target_variable = "inc hosp",
-  locations = c("06", "25"),
-  data_location = "covidData",
-  hub = "US"
-)
-
-fc_date_truth_data <- load_truth(
-  as_of = "2021-06-07",
-  truth_source = "HealthData",
-  target_variable = "inc hosp",
-  locations = c("06", "25"),
-  data_location = "covidData",
-  hub = "US"
-)
-
-combined_truth <- dplyr::bind_rows(
-  truth_data %>% mutate(fc_date = "2022-07-22"),
-  old_truth_data %>% mutate(fc_date = "2022-04-29"),
-  fc_date_truth_data %>% mutate(fc_date = "2021-06-07")
-)
-
-ggplot(combined_truth) +
-  geom_line(mapping = aes(x = target_end_date, y = value, color = fc_date, linetype = fc_date)) +
-  facet_wrap(~abbreviation, ncol = 1) +
-  theme_bw()
-
-manual_truth_data <- dplyr::bind_rows(
+# load truth data
+truth_data <- dplyr::bind_rows(
   readr::read_csv("csv-data/CA-JHU-reportdate-hospitalizations-2022-07-22.csv") %>%
     dplyr::transmute(
       location = "06", target_end_date = date, value = inc,
@@ -176,9 +96,10 @@ manual_truth_data <- dplyr::bind_rows(
     ),
 )
 
-truth_data <- manual_truth_data %>%
+truth_data <- truth_data %>%
   dplyr::filter(target_end_date >= "2020-10-01")
 
+# calculate scores
 scores <- covidHubUtils::score_forecasts(
   combined_forecasts,
   truth_data %>% filter(target_end_date <= "2021-06-12"),
@@ -216,11 +137,9 @@ models_to_plot <- c(
 forecasts_to_plot <- covidHubUtils::get_plot_forecast_data(
   forecast_data = combined_forecasts,
   truth_data = truth_data,
-  # models_to_plot = unique(combined_forecasts$model),
   models_to_plot = models_to_plot,
   horizons_to_plot = 28,
   quantiles_to_plot = c(0.025, 0.5, 0.975),
-  # quantiles_to_plot = c(0.025, 0.25, 0.5, 0.75, 0.975),
   locations_to_plot = "25",
   target_variable_to_plot = "inc hosp",
   hub = "US")
@@ -440,60 +359,6 @@ p <- ggplot(mean_scores_by_forecast_date) +
   geom_line(mapping = aes(x = forecast_date, y = wis, color = model, linetype = model)) +
   theme_bw()
 p
-
-# covidHubUtils::plot_forecasts(
-#     forecast_data = stl_forecasts,
-#     facet = formula(trend_w~location+trend_deg),
-#     hub = "US",
-#     truth_source = "HealthData",
-#     subtitle = "none",
-#     title = "none",
-#     show_caption = FALSE,
-#     plot = FALSE
-#   ) +
-#   scale_x_date(
-#     breaks = "1 month",
-#     date_labels = "%b-%y",
-#     limits = as.Date(c(
-#       reference_date - (7 * 32), reference_date + 28
-#     ), format = "%b-%y")
-#   ) +
-#   theme_update(
-#     legend.position = "bottom",
-#     legend.direction = "vertical",
-#     legend.text = element_text(size = 8),
-#     legend.title = element_text(size = 8),
-#     axis.text.x = element_text(angle = 90),
-#     axis.title.x = element_blank()
-#   ) +
-#   ggforce::facet_wrap_paginate(
-#     ~ location,
-#     scales = "free",
-#     ncol = 2,
-#     nrow = 3,
-#     page = 1
-#   )
-
-# n <- n_pages(p)
-# pdf(
-#   plot_path,
-#   paper = 'A4',
-#   width = 205 / 25,
-#   height = 270 / 25
-# )
-# for (i in 1:n) {
-#   suppressWarnings(print(
-#     p + ggforce::facet_wrap_paginate(
-#       ~ location,
-#       scales = "free",
-#       ncol = 2,
-#       nrow = 3,
-#       page = i
-#     )
-#   ))
-# }
-# dev.off()
-
 
 # final selection of models
 sarix_mean_scores <- mean_scores %>%
