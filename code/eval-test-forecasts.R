@@ -75,6 +75,11 @@ combined_forecasts %>%
   dplyr::count(location, model, forecast_date) %>%
   as.data.frame()
 
+combined_forecasts %>%
+  dplyr::filter(type == "quantile") %>%
+  dplyr::count(location, model) %>%
+  as.data.frame()
+
 # load truth data
 truth_data <- dplyr::bind_rows(
   readr::read_csv("csv-data/CA-JHU-reportdate-hospitalizations-2022-07-22.csv") %>%
