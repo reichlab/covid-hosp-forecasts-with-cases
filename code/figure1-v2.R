@@ -1,11 +1,7 @@
 # figure 1
 library(dplyr)
-library(covidHubUtils)
 library(ggplot2)
 library(ggpubr)
-library(forecast)
-library(broom)
-library(cowplot)
 
 # use all data as of 2022-07-22
 as_of_date <- as.Date("2022-07-22")
@@ -80,10 +76,10 @@ p1_1_ma <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = D
                                 "smooth JHU report-date cases" = "#E7B800", 
                                 "smooth DPH test-date cases" = "#FC4E07",
                                 "test-date cases" = "#FC4E07")) +
-  scale_y_log10(name = "Reported Cases", labels = scales::comma,
+  scale_y_log10(name = "Reported Cases\n (log scale)", labels = scales::comma,
                 # this is decided manually 
                 sec.axis = sec_axis(~(.*1/15), labels = scales::comma,
-                                    name = "Reported Hospitalizations"))+
+                                    name = "Reported Hospitalizations\n (log scale)"))+
   scale_x_date(date_breaks = "1 month", 
                date_labels = "%b %Y", 
                limits = c(analysis_start_date, as_of_date),
@@ -117,10 +113,10 @@ p1_3_ca <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = D
                                 "smooth DPH test-date cases" = "#FC4E07",
                                 "smooth CA DPH report-date cases" = "#778A35",
                                 "CA DPH report-date cases" = "#778A35")) +
-  scale_y_log10(name = "Reported Cases", 
+  scale_y_log10(name = "Reported Cases\n (log scale)", 
                 labels = scales::comma,
                 sec.axis = sec_axis(~(.*1/15), labels = scales::comma,
-                                    name = "Reported Hospitalizations"))+
+                                    name = "Reported Hospitalizations\n (log scale)"))+
   scale_x_date(date_breaks = "1 month", 
                date_labels = "%b %Y", 
                limits = c(analysis_start_date, as_of_date),
@@ -169,9 +165,9 @@ p_growth_ma <- ggplot(data = ma_data_rel_inc_7d,
              linetype="dashed", colour="black")+
   geom_vline(xintercept = as.numeric(validation_date),
              linetype="dashed", colour="black") + 
-  annotate("text", x=validation_date, y=2.3, label= "Validation Period", size = 3,hjust = -0.1) + 
-  annotate("text", x=validation_test_split, y=2.3, label= "Test Period", size = 3,hjust = -0.1) + 
-  scale_y_log10(name="Relative 1 Week Change\n (Log Scale)",
+  annotate("text", x=validation_date, y=max(ma_data_rel_inc_7d$rel_inc_7d, na.rm=TRUE), label= "Validation Period", size = 3,hjust = -0.1, vjust=1) + 
+  annotate("text", x=validation_test_split, y=max(ma_data_rel_inc_7d$rel_inc_7d, na.rm=TRUE), label= "Test Period", size = 3,hjust = -0.1, vjust=1) + 
+  scale_y_log10(name="Relative 1 Week Change\n (log scale)",
                 sec.axis = sec_axis(~.,
                                     breaks = NULL,
                                     name = "")
@@ -203,9 +199,9 @@ p_growth_ca <- ggplot(data = ca_data_rel_inc_7d,
              linetype="dashed", colour="black")+
   geom_vline(xintercept = as.numeric(validation_date),
              linetype="dashed", colour="black") + 
-  annotate("text", x=validation_date, y=2.3, label= "Validation Period", size = 3,hjust = -0.1) + 
-  annotate("text", x=validation_test_split, y=2.3, label= "Test Period", size = 3,hjust = -0.1) + 
-  scale_y_log10(name="Relative 1 Week Change\n (Log Scale)",
+  annotate("text", x=validation_date, y=max(ca_data_rel_inc_7d$rel_inc_7d, na.rm=TRUE), label= "Validation Period", size = 3,hjust = -0.1, vjust=1) + 
+  annotate("text", x=validation_test_split, y=max(ca_data_rel_inc_7d$rel_inc_7d, na.rm=TRUE), label= "Test Period", size = 3,hjust = -0.1, vjust=1) + 
+  scale_y_log10(name="Relative 1 Week Change\n (log scale)",
                 sec.axis = sec_axis(~.,
                                     breaks = NULL,
                                     name = ""))+
@@ -238,4 +234,4 @@ p1 <- ggpubr::ggarrange(p1_1_ma, ggplot() + theme_void(),
                         #legend="none",
                         align = "hv")
 
-ggsave('figures/fig1_smooth.jpeg', plot=p1, dpi=300, width = 12, height=8.5)
+ggsave('figures/fig1_smooth.jpeg', plot=p1, dpi=300, width = 8.5, height=11)

@@ -121,7 +121,10 @@ p1_3_ca <- ggplot2::ggplot(data = ca_data,
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   annotate("text", x=validation_date, y=300000, label= "Validation Period", size = 3,hjust = -0.1) + 
   annotate("text", x=validation_test_split, y=300000, label= "Test Period", size = 3,hjust = -0.1) +
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", "report-date cases" = "#E7B800", "test-date cases" = "#FC4E07", "CA DPH report-date cases" = "#778A35")) +
+  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
+                                "report-date cases" = "#E7B800", 
+                                "test-date cases" = "#FC4E07", 
+                                "CA DPH report-date cases" = "#778A35")) +
   scale_y_continuous(name = "Reported Cases", 
                      sec.axis = sec_axis(~(.*1/15),
                                          name = "Reported Hospitalizations"))+
@@ -136,26 +139,33 @@ p1_3_ca <- ggplot2::ggplot(data = ca_data,
         legend.position = "none",
         plot.margin = unit(c(0, 5, -1, 5), "pt"),
         text = element_text(size =10))
+
 # weekly relative change
 ma_data_rel_inc_7d <- ma_data %>%
   dplyr::group_by(facet_title, Data) %>%
   dplyr::arrange(target_end_date) %>%
-  dplyr::mutate(rel_inc_7d = (value)/lag(value,7)) %>%
+  dplyr::mutate(rel_inc_7d = (value)/lag(value,7),
+                smooth_rel_inc_7d = slider::slide_dbl(rel_inc_7d, mean,
+                                                      .before = 6, .after=6, 
+                                                      .complete=FALSE)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(facet_title = "Massachusetts Growth Rates")
 
 ca_data_rel_inc_7d <- ca_data %>%
   dplyr::group_by(facet_title, Data) %>%
   dplyr::arrange(target_end_date) %>%
-  dplyr::mutate(rel_inc_7d = (value)/lag(value,7)) %>%
+  dplyr::mutate(rel_inc_7d = (value)/lag(value,7),
+                smooth_rel_inc_7d = slider::slide_dbl(rel_inc_7d, mean,
+                                                      .before = 6, .after=6, 
+                                                      .complete=FALSE)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(facet_title = "California Growth Rates")
 
 # rel_inc figure
 p_growth_ma <- ggplot(data = ma_data_rel_inc_7d, 
-                   aes(x = target_end_date, y = rel_inc_7d, color = Data)) +
-  geom_smooth(span=.15, se=FALSE, lwd = 0.5) +
-  geom_point(alpha=.1) +
+                   aes(x = target_end_date, color = Data)) +
+  geom_line(aes(y=smooth_rel_inc_7d)) +
+  geom_point(aes(y = rel_inc_7d), alpha=.1) +
   geom_hline(yintercept=1, linetype=2, alpha=.7) +
   geom_vline(xintercept = as.numeric(validation_test_split),
              linetype="dashed", colour="black")+
@@ -169,7 +179,10 @@ p_growth_ma <- ggplot(data = ma_data_rel_inc_7d,
                                     name = "")
                 )+
   theme_bw() +
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", "report-date cases" = "#E7B800", "test-date cases" = "#FC4E07","CA DPH report-date cases" = "#778A35")) +
+  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
+                                "report-date cases" = "#E7B800", 
+                                "test-date cases" = "#FC4E07",
+                                "CA DPH report-date cases" = "#778A35")) +
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   scale_x_date(name=NULL, 
                date_breaks = "1 month", 
@@ -186,7 +199,7 @@ p_growth_ma <- ggplot(data = ma_data_rel_inc_7d,
 
 p_growth_ca <- ggplot(data = ca_data_rel_inc_7d, 
                       aes(x = target_end_date, y = rel_inc_7d, color = Data)) +
-  geom_smooth(span=.15, se=FALSE, lwd = 0.5) +
+  geom_line(aes(y=smooth_rel_inc_7d)) +
   geom_point(alpha=.1) +
   geom_hline(yintercept=1, linetype=2, alpha=.7) +
   geom_vline(xintercept = as.numeric(validation_test_split),
@@ -200,7 +213,10 @@ p_growth_ca <- ggplot(data = ca_data_rel_inc_7d,
                                     breaks = NULL,
                                     name = ""))+
   theme_bw() +
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", "report-date cases" = "#E7B800", "test-date cases" = "#FC4E07","CA DPH report-date cases" = "#778A35")) +
+  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
+                                "report-date cases" = "#E7B800", 
+                                "test-date cases" = "#FC4E07",
+                                "CA DPH report-date cases" = "#778A35")) +
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   scale_x_date(name=NULL, 
                date_breaks = "1 month", 
@@ -219,7 +235,7 @@ p1 <- ggpubr::ggarrange(p1_1_ma, ggplot() + theme_void(),p_growth_ma, ggplot() +
                         labels = c("A","", "B","", "C", "","D"),
                         ncol =1,common.legend = TRUE, legend="bottom",
                         align = "hv")
-ggsave('figures/fig1_raw_CA_DPH.jpeg',dpi=300)
+ggsave('figures/fig1_raw_CA_DPH.jpeg',dpi=300, width = 12, height=8.5)
 
 ####figure for smoothed data####
 ma_case_test<- ma_case_test %>%
@@ -379,25 +395,32 @@ p1_3_ca <- ggplot2::ggplot(data = ca_data,
         legend.position = "none",
         plot.margin = unit(c(0, 5, -1, 5), "pt"),
         text = element_text(size =10))
+
 # weekly relative change
 ma_data_rel_inc_7d <- ma_data %>%
   dplyr::group_by(facet_title, Data) %>%
   dplyr::arrange(target_end_date) %>%
-  dplyr::mutate(rel_inc_7d = (value)/lag(value,7)) %>%
+  dplyr::mutate(rel_inc_7d = (value)/lag(value,7),
+                smooth_rel_inc_7d = slider::slide_dbl(rel_inc_7d, mean,
+                                                      .before = 6, .after=6, 
+                                                      .complete=FALSE)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(facet_title = "Massachusetts Growth Rates")
 
 ca_data_rel_inc_7d <- ca_data %>%
   dplyr::group_by(facet_title, Data) %>%
   dplyr::arrange(target_end_date) %>%
-  dplyr::mutate(rel_inc_7d = (value)/lag(value,7)) %>%
+  dplyr::mutate(rel_inc_7d = (value)/lag(value,7),
+                smooth_rel_inc_7d = slider::slide_dbl(rel_inc_7d, mean,
+                                                      .before = 6, .after=6, 
+                                                      .complete=FALSE)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(facet_title = "California Growth Rates")
 
 # rel_inc figure
 p_growth_ma <- ggplot(data = ma_data_rel_inc_7d, 
                       aes(x = target_end_date, y = rel_inc_7d, color = Data)) +
-  geom_smooth(span=.15, se=FALSE, lwd = 0.5) +
+  geom_line(aes(y=smooth_rel_inc_7d)) +
   geom_point(alpha=.1) +
   geom_hline(yintercept=1, linetype=2, alpha=.7) +
   geom_vline(xintercept = as.numeric(validation_test_split),
@@ -432,7 +455,7 @@ p_growth_ma <- ggplot(data = ma_data_rel_inc_7d,
 
 p_growth_ca <- ggplot(data = ca_data_rel_inc_7d, 
                       aes(x = target_end_date, y = rel_inc_7d, color = Data)) +
-  geom_smooth(span=.15, se=FALSE, lwd = 0.5) +
+  geom_line(aes(y=smooth_rel_inc_7d)) +
   geom_point(alpha=.1) +
   geom_hline(yintercept=1, linetype=2, alpha=.7) +
   geom_vline(xintercept = as.numeric(validation_test_split),
