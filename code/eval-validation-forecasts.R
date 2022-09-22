@@ -147,7 +147,8 @@ mean_scores_by_hzn <- scores %>%
   left_join(covidHubUtils::hub_locations, by= c("location" = "fips"))
 
 p_wis_by_hzn <- ggplot(mean_scores_by_hzn, aes(x=as.numeric(horizon), y=wis, color=model_brief)) + 
-  geom_line(aes(linetype = model_brief)) + 
+  geom_point(aes(shape = model_brief)) + 
+  geom_line() + 
   facet_wrap(.~location_name, ncol=1, scales="free_y") + 
   ylab("Average WIS") +
   scale_x_continuous(name="forecast horizon (days)", breaks=c(0, 7, 14, 21, 28)) +
@@ -164,19 +165,19 @@ p_wis_by_hzn <- ggplot(mean_scores_by_hzn, aes(x=as.numeric(horizon), y=wis, col
                                 "report_dph_smooth_case_True" = "#778A35", 
                                 "report_jhu-csse_smooth_case_True" = "#E7B800", 
                                 "test_dph_smooth_case_True" = "#FC4E07")) +
-  scale_linetype_manual(name = "model", 
-                        labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
-                                   "report_dph_smooth_case_True" = "ReportCase-DPH",
-                                   "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
-                                   "test_dph_smooth_case_True" = "TestCase-DPH"),
-                        breaks = c("none_jhu-csse_smooth_case_False",
-                                   "report_jhu-csse_smooth_case_True", 
-                                   "report_dph_smooth_case_True", 
-                                   "test_dph_smooth_case_True"),
-                        values = c("none_jhu-csse_smooth_case_False"= 1, 
-                                   "report_dph_smooth_case_True" = 3, 
-                                   "report_jhu-csse_smooth_case_True" = 2, 
-                                   "test_dph_smooth_case_True" = 4)) +
+  scale_shape_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= 15, 
+                                "report_dph_smooth_case_True" = 16, 
+                                "report_jhu-csse_smooth_case_True" = 17, 
+                                "test_dph_smooth_case_True" = 18)) +
   theme(legend.position = c(0.03,0.97), legend.justification = c(0,1))
 
 pdf("figures/validation_wis_by_horizon.pdf", height=6, width=8)
