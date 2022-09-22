@@ -2,7 +2,7 @@ library(tidyverse)
 library(covidHubUtils)
 theme_set(theme_bw())
 
-#' Parse model names
+# Parse model names ----
 parse_model_names <- function(model) {
   name_segments <- str_split(model, "_")
   return(data.frame(
@@ -18,7 +18,7 @@ parse_model_names <- function(model) {
   ))
 }
 
-# load forecasts
+# load forecasts ----
 inc_hosp_targets <- paste(0:130, "day ahead inc hosp")
 
 forecasts <- dplyr::bind_rows(
@@ -80,7 +80,7 @@ combined_forecasts %>%
   dplyr::count(location, model) %>%
   as.data.frame()
 
-# load truth data
+# load truth data ----
 truth_data <- dplyr::bind_rows(
   readr::read_csv("csv-data/CA-JHU-reportdate-hospitalizations-2022-07-22.csv") %>%
     dplyr::transmute(
@@ -103,7 +103,7 @@ truth_data <- dplyr::bind_rows(
 truth_data <- truth_data %>%
   dplyr::filter(target_end_date >= "2020-10-01")
 
-# calculate scores
+# calculate scores ----
 scores <- covidHubUtils::score_forecasts(
   combined_forecasts,
   truth_data,
@@ -129,7 +129,61 @@ mean_scores <- dplyr::bind_cols(
 mean_scores
 
 
-# plot the forecasts
+# plotting mean scores by horizon ----
+mean_scores_by_hzn <- scores %>%
+  dplyr::mutate(
+    model_brief = dplyr::case_when(
+      model %in% c("COVIDhub-4_week_ensemble", "COVIDhub-baseline") ~ model,
+      TRUE ~ paste0(case_type, "_", case_source, "_smooth_case_", smooth_case)
+    )
+  ) %>%
+  filter(!(model_brief %in%  c("COVIDhub-4_week_ensemble", "COVIDhub-baseline"))) %>%
+  group_by(location, horizon, model_brief) %>%
+  summarize(wis = mean(wis),
+            mae = mean(abs_error),
+            coverage_95 = mean(coverage_95)) %>%
+  arrange(location, wis) %>%
+  left_join(covidHubUtils::hub_locations, by= c("location" = "fips"))
+
+p_wis_by_hzn <- ggplot(mean_scores_by_hzn, aes(x=as.numeric(horizon), y=wis, color=model_brief)) + 
+  geom_line() + 
+  geom_point(aes(shape = model_brief)) + 
+  facet_wrap(.~location_name, ncol=1, scales="free_y") + 
+  ylab("Average WIS") +
+  scale_x_continuous(name="forecast horizon (days)", breaks=c(0, 7, 14, 21, 28)) +
+  scale_color_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= "darkgrey", 
+                                "report_dph_smooth_case_True" = "#778A35", 
+                                "report_jhu-csse_smooth_case_True" = "#E7B800", 
+                                "test_dph_smooth_case_True" = "#FC4E07")) +
+  scale_shape_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= 15, 
+                                "report_dph_smooth_case_True" = 16, 
+                                "report_jhu-csse_smooth_case_True" = 17, 
+                                "test_dph_smooth_case_True" = 18)) +
+  theme(legend.position = c(0.03,0.97), legend.justification = c(0,1))
+
+pdf("figures/test_wis_by_horizon.pdf", height=6, width=8)
+p_wis_by_hzn
+dev.off()
+
+# plot the forecasts ----
 pdf("figures/pred_dists_by_model.pdf", height = 12, width = 16)
 for (loc in c("06", "25")) {
   loc_name <- truth_data %>%
@@ -191,7 +245,7 @@ for (loc in c("06", "25")) {
 dev.off()
 
 
-# plot of predictive medians only (no intervals), facetted by forecast date
+# plot of predictive medians only (no intervals), facetted by forecast date ----
 pdf("figures/pred_medians_by_date.pdf", height = 48, width = 16)
 for (loc in c("06", "25")) {
   loc_name <- covidData::fips_codes %>%
@@ -252,7 +306,7 @@ for (loc in c("06", "25")) {
 dev.off()
 
 
-# plot of mean WIS by forecast date
+# plot of mean WIS by forecast date ----
 mean_scores_by_forecast_date <- scores %>%
   dplyr::mutate(
     model_brief = dplyr::case_when(
@@ -260,16 +314,89 @@ mean_scores_by_forecast_date <- scores %>%
       TRUE ~ paste0(case_type, "_", case_source, "_smooth_case_", smooth_case)
     )
   ) %>%
+  filter(!(model_brief %in%  c("COVIDhub-4_week_ensemble", "COVIDhub-baseline"))) %>%
   dplyr::group_by(model_brief, forecast_date, location) %>%
   dplyr::summarize(
     wis = mean(wis),
     mae = mean(abs_error)
-  )
-p <- ggplot(mean_scores_by_forecast_date) +
-  geom_line(mapping = aes(x = forecast_date, y = wis, color = model_brief, linetype = model_brief)) +
-  facet_wrap( ~ location, ncol = 1) +
-  theme_bw()
+  ) %>%
+  left_join(covidHubUtils::hub_locations, by= c("location" = "fips"))
 
-pdf("figures/mean_wis_by_fc_date.pdf", height = 10, width = 18)
+p <- ggplot(mean_scores_by_forecast_date) +
+  geom_point(mapping = aes(x = forecast_date, y = wis, color = model_brief, fill=model_brief, shape=model_brief)) +
+  geom_line(mapping = aes(x = forecast_date, y = wis, color = model_brief)) +
+  facet_wrap( ~ location_name, ncol = 1, scales = "free_y") +
+  ylab("Average WIS") +
+  scale_x_date(NULL, 
+               date_breaks = "1 month", 
+               date_labels = "%b '%y",
+               expand = expansion(add=1)) +
+  scale_color_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= "darkgrey", 
+                                "report_dph_smooth_case_True" = "#778A35", 
+                                "report_jhu-csse_smooth_case_True" = "#E7B800", 
+                                "test_dph_smooth_case_True" = "#FC4E07")) +
+  scale_shape_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= 15, 
+                                "report_dph_smooth_case_True" = 16, 
+                                "report_jhu-csse_smooth_case_True" = 17, 
+                                "test_dph_smooth_case_True" = 18)) +
+  scale_fill_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= "darkgrey", 
+                                "report_dph_smooth_case_True" = "#778A35", 
+                                "report_jhu-csse_smooth_case_True" = "#E7B800", 
+                                "test_dph_smooth_case_True" = "#FC4E07")) +
+  theme_bw() +
+  theme(axis.ticks.length.x = unit(0.5, "cm"), 
+        axis.text.x = element_text(vjust = 7, hjust = -0.2),
+        legend.position = c(0.03,0.97), legend.justification = c(0,1)) 
+
+pdf("figures/test_mean_wis_by_fc_date.pdf", height = 6, width = 8)
 p
 dev.off()
+
+
+# plot of mean WIS by forecast date and horizon ----
+mean_scores_by_forecast_date_horizon <- scores %>%
+  dplyr::mutate(
+    model_brief = dplyr::case_when(
+      model %in% c("COVIDhub-4_week_ensemble", "COVIDhub-baseline") ~ model,
+      TRUE ~ paste0(case_type, "_", case_source, "_smooth_case_", smooth_case)
+    )
+  ) %>%
+  filter(!(model_brief %in%  c("COVIDhub-4_week_ensemble", "COVIDhub-baseline"))) %>%
+  dplyr::group_by(model_brief, forecast_date, horizon, location) %>%
+  dplyr::summarize(
+    wis = mean(wis),
+    mae = mean(abs_error)
+  )
+
+ggplot(mean_scores_by_forecast_date_horizon) +
+  geom_point(mapping = aes(x = forecast_date, y = wis, color = model_brief, fill=model_brief, shape=model_brief)) +
+  geom_line(mapping = aes(x = forecast_date, y = wis, color = model_brief, linetype = model_brief)) +
+  facet_grid( horizon ~ location) +
+  theme_bw()
