@@ -23,11 +23,12 @@ inc_hosp_targets <- paste(0:130, "day ahead inc hosp")
 
 forecasts <- dplyr::bind_rows(
   load_forecasts(
+    ## query for CA data
     dates = seq.Date(from = as.Date("2020-12-07"),
                     to = as.Date("2021-06-07"),
                     by = 7),
     date_window_size = 6,
-    locations = c("06", "25"),
+    locations = c("06"),
     types = c("point", "quantile"),
     targets = inc_hosp_targets,
     source = "local_hub_repo",
@@ -37,12 +38,13 @@ forecasts <- dplyr::bind_rows(
     as_of = NULL,
     hub = c("US")
   ),
+  ## query for MA data
   load_forecasts(
     dates = seq.Date(from = as.Date("2020-12-07"),
                     to = as.Date("2021-06-07"),
                     by = 7),
     date_window_size = 6,
-    locations = c("06", "25"),
+    locations = c("25"),
     types = c("point", "quantile"),
     targets = inc_hosp_targets,
     source = "local_hub_repo",
@@ -51,7 +53,7 @@ forecasts <- dplyr::bind_rows(
     verbose = FALSE,
     as_of = NULL,
     hub = c("US")
-  ),
+  )
 )
 
 hub_forecasts <- load_forecasts(
@@ -124,15 +126,19 @@ mean_scores <- dplyr::bind_cols(
   as.data.frame()
 mean_scores
 
-# plotting mean scores by horizon ----
+# final figure: plotting mean scores by horizon ----
+models_to_include <- c("none_jhu-csse_smooth_case_False",
+                       "report_jhu-csse_smooth_case_True", 
+                       "report_dph_smooth_case_True", 
+                       "test_dph_smooth_case_True")
 mean_scores_by_hzn <- scores %>%
   dplyr::mutate(
     model_brief = dplyr::case_when(
-      model %in% c("COVIDhub-4_week_ensemble", "COVIDhub-baseline") ~ model,
+      model %in% c("COVIDhub-ensemble", "COVIDhub-baseline") ~ model,
       TRUE ~ paste0(case_type, "_", case_source, "_smooth_case_", smooth_case)
     )
   ) %>%
-  filter(!(model_brief %in%  c("COVIDhub-4_week_ensemble", "COVIDhub-baseline"))) %>%
+  filter(model_brief %in%  models_to_include) %>%
   group_by(location, horizon, model_brief) %>%
   summarize(wis = mean(wis),
             mae = mean(abs_error),
@@ -390,7 +396,7 @@ p <- ggplot() +
   facet_wrap( ~ forecast_date, scales = "free_y")
 p
 
-# plot of mean WIS by forecast date ----
+# final figure: plot of mean WIS by forecast date ----
 mean_scores_by_forecast_date <- scores %>%
   dplyr::mutate(
     model_brief = dplyr::case_when(
@@ -398,7 +404,7 @@ mean_scores_by_forecast_date <- scores %>%
       TRUE ~ paste0(case_type, "_", case_source, "_smooth_case_", smooth_case)
     )
   ) %>%
-  filter(!(model_brief %in%  c("COVIDhub-4_week_ensemble", "COVIDhub-baseline"))) %>%
+  filter(model_brief %in%  models_to_include) %>%
   dplyr::group_by(model_brief, forecast_date, location) %>%
   dplyr::summarize(
     wis = mean(wis),
@@ -406,7 +412,7 @@ mean_scores_by_forecast_date <- scores %>%
   ) %>%
   left_join(covidHubUtils::hub_locations, by= c("location" = "fips"))
 
-p <- ggplot(mean_scores_by_forecast_date) +
+p_wis_by_fc_date <- ggplot(mean_scores_by_forecast_date) +
   geom_point(mapping = aes(x = forecast_date, y = wis, color = model_brief, fill=model_brief, shape=model_brief)) +
   geom_line(mapping = aes(x = forecast_date, y = wis, color = model_brief)) +
   facet_wrap( ~ location_name, ncol = 1, scales = "free_y") +
@@ -414,7 +420,7 @@ p <- ggplot(mean_scores_by_forecast_date) +
   scale_x_date(NULL, 
                date_breaks = "1 month", 
                date_labels = "%b '%y",
-               expand = expansion(add=1)) +
+               expand = expansion(add=10)) +
   scale_color_manual(name = "model", 
                      labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
                                 "report_dph_smooth_case_True" = "ReportCase-DPH",
@@ -457,9 +463,9 @@ p <- ggplot(mean_scores_by_forecast_date) +
   theme_bw() +
   theme(axis.ticks.length.x = unit(0.5, "cm"), 
         axis.text.x = element_text(vjust = 7, hjust = -0.2),
-        legend.position = c(0.03,0.97), legend.justification = c(0,1)) 
+        legend.position = c(0.97,0.97), legend.justification = c(1,1)) 
 
-pdf("figures/validation_wis_by_horizon.pdf", height=6, width=8)
+pdf("figures/validation_wis_by_fc_date.pdf", height=6, width=8)
 p_wis_by_fc_date
 dev.off()
 
