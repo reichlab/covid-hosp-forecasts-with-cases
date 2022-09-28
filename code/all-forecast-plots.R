@@ -36,6 +36,7 @@ plot_case_hosp_forecasts <- function(forecast_date,
     ## CA choices
     testdate_forecast_model <- "test_dph_smooth_case_True_SARIX_p_2_d_0_P_0_D_1"
     rptdate_forecast_model <- "report_jhu-csse_smooth_case_True_SARIX_p_4_d_1_P_0_D_0"
+    rptdate_dph_forecast_model <- "report_dph_smooth_case_True_SARIX_p_4_d_1_P_0_D_0"
     none_forecast_model <- "none_jhu-csse_smooth_case_False_SARIX_p_1_d_1_P_1_D_0"
   } else {
     ## MA choices
@@ -62,6 +63,25 @@ plot_case_hosp_forecasts <- function(forecast_date,
                                lag(rpt_date_cases, 5) + 
                                lag(rpt_date_cases, 6)) / 7 ) 
   
+  ## for CA only, compile report-date DPH data and merge
+  if(state=="ca") {
+    state_filename <- "CA-DPH-reportdate-covid-"
+    rptdate_dph_final_filename <- file.path("csv-data", paste0(state_filename, final_date,".csv"))
+    rptdate_dph_final_data <- read_csv(rptdate_dph_final_filename) |> 
+      select(-issue_date) |> 
+      rename(date = report_date, rpt_date_dph_cases = new_positive)
+    rptdate_final_data <- left_join(rptdate_final_data, rptdate_dph_final_data)
+    rptdate_final_smooth <- rptdate_dph_final_data |> 
+      mutate(rpt_date_dph_cases = (lag(rpt_date_dph_cases, 0) + 
+                                     lag(rpt_date_dph_cases, 1) + 
+                                     lag(rpt_date_dph_cases, 2) + 
+                                     lag(rpt_date_dph_cases, 3) + 
+                                     lag(rpt_date_dph_cases, 4) + 
+                                     lag(rpt_date_dph_cases, 5) + 
+                                     lag(rpt_date_dph_cases, 6)) / 7 ) |> 
+      left_join(rptdate_final_smooth)
+  }
+
   ## compile test-date case data from DPH files
   
   ## load state-specific testdate data
@@ -137,13 +157,24 @@ plot_case_hosp_forecasts <- function(forecast_date,
            data_type = "none") |> 
     pivot_wider(names_from = quantile, values_from = value, names_prefix = "q")
   
+  if(state == "ca"){
+    rptdate_dph_fcast_filename <- file.path("forecasts", 
+                                            state, 
+                                            rptdate_dph_forecast_model,
+                                            paste0(forecast_date, "-", rptdate_dph_forecast_model, ".csv"))
+    rptdate_dph_forecast_data <- read_csv(rptdate_dph_fcast_filename) |> 
+      mutate(target_variable = substr(target, start = nchar(target)-7, stop=nchar(target)),
+             data_type = "rpt_date_dph_cases") |> 
+      pivot_wider(names_from = quantile, values_from = value, names_prefix = "q")
+  }
+  
   ## plot cases
   case_plot <- 
     ggplot(mapping = aes(x=date)) +
     ## as of data lines
     # geom_point(data = as_of_data, aes(y=value), alpha=.5) +
     ## final data line until forecast date
-    geom_point(data = filter(final_data), aes(y=value, color=data_type), alpha=0.5) +
+    geom_point(data = filter(final_data), aes(y=value, color=data_type, shape=data_type), alpha=0.5) +
     ## final smoothed data line until forecast date
     geom_line(data = filter(final_data_smooth, date<=forecast_date), aes(y=value, color=data_type), alpha=.6) +
     ## forecast ribbons
@@ -153,9 +184,9 @@ plot_case_hosp_forecasts <- function(forecast_date,
                 aes(x=target_end_date, ymin=q0.1, ymax=q0.9, fill=data_type), alpha=.3, size=0) +
     ## forecast lines
     geom_line(data = filter(testdate_forecast_data, target_variable == "inc case"),
-              aes(x=target_end_date, y=q0.5, color=data_type), alpha=.7, size=2) +
+              aes(x=target_end_date, y=q0.5, color=data_type), alpha=.7, size=1.5) +
     geom_line(data = filter(rptdate_forecast_data, target_variable == "inc case"),
-              aes(x=target_end_date, y=q0.5, color=data_type),alpha=.7, size=2) +
+              aes(x=target_end_date, y=q0.5, color=data_type),alpha=.7, size=1.5) +
     scale_x_date(NULL, 
                  limits = c(forecast_date - 30, forecast_date+30),
                  date_breaks = "1 month", 
@@ -167,14 +198,25 @@ plot_case_hosp_forecasts <- function(forecast_date,
     geom_vline(xintercept = forecast_date+.5, linetype=2, col="grey") + 
     scale_y_continuous(labels = scales::comma, name="incident cases") +
     scale_color_manual(values = c("rpt_date_cases" = "#E7B800", 
-                                  "test_date_cases" = "#FC4E07", 
-                                  "no cases" = "darkgrey")) +
+                                  "rpt_date_dph_cases" = "#778A35",
+                                  "test_date_cases" = "#FC4E07")) +
+    scale_shape_manual(values = c("rpt_date_dph_cases" = 16, 
+                                  "rpt_date_cases" = 17, 
+                                  "test_date_cases" = 18)) +
     scale_fill_manual(values = c("rpt_date_cases" = "#E7B800", 
-                                  "test_date_cases" = "#FC4E07", 
-                                  "no cases" = "darkgrey")) +
+                                 "rpt_date_dph_cases" = "#778A35",
+                                 "test_date_cases" = "#FC4E07")) +
     ## scale_color_brewer(palette = "Dark2") +
     ## scale_fill_brewer(palette = "Dark2") +
     ggtitle(paste(abbr_to_name(toupper(state)), "case data and forecasts:", forecast_date))
+  
+  if(state=="ca") {
+    case_plot <- case_plot +
+      geom_line(data = filter(rptdate_dph_forecast_data, target_variable == "inc case"),
+                aes(x=target_end_date, y=q0.5, color=data_type), alpha=.7, size=1.5) +
+      geom_ribbon(data = filter(rptdate_dph_forecast_data, target_variable == "inc case"),
+                  aes(x=target_end_date, ymin=q0.1, ymax=q0.9, fill=data_type), alpha=.3, size=0)
+  }
   
   ## plot hospitalizations
   hosp_plot <- ggplot(mapping = aes(x=date)) +
@@ -190,9 +232,9 @@ plot_case_hosp_forecasts <- function(forecast_date,
                 aes(x=target_end_date, ymin=q0.1, ymax=q0.9, fill="none"), alpha=.3, size=0) +
     ## draw forecast lines
     geom_line(data = filter(testdate_forecast_data, target_variable == "inc hosp"),
-              aes(x=target_end_date, y=q0.5, color=data_type), size=2, alpha=.7) +
+              aes(x=target_end_date, y=q0.5, color=data_type), size=1.5, alpha=.7) +
     geom_line(data = filter(rptdate_forecast_data, target_variable == "inc hosp"),
-              aes(x=target_end_date, y=q0.5, color=data_type), size=2, alpha=.7) +
+              aes(x=target_end_date, y=q0.5, color=data_type), size=1.5, alpha=.7) +
     geom_line(data = filter(none_forecast_data, target_variable == "inc hosp"),
               aes(x=target_end_date, y=q0.5, color="none"), size=2, alpha=.7) +
     scale_x_date(NULL, 
@@ -206,50 +248,36 @@ plot_case_hosp_forecasts <- function(forecast_date,
           legend.background=element_rect(fill = alpha("white", 0.5))) +
     geom_vline(xintercept = forecast_date+.5, linetype=2, col="grey") + 
     scale_y_continuous(labels = scales::comma, name = "incident hospitalizations") +
-    scale_color_manual(name = "Data used", 
-                       labels = c("rpt_date_cases" = "report-date cases",
-                                  "test_date_cases" = "test-date cases",
-                                  "none" = "no cases"),
-                       breaks = c("rpt_date_cases", "test_date_cases", "none"),
+    scale_color_manual(name = "Models", 
+                       labels = c("rpt_date_cases" = "ReportCase-CSSE",
+                                  "rpt_date_dph_cases" = "ReportCase-DPH",
+                                  "test_date_cases" = "TestCase",
+                                  "none" = "HospOnly"),
+                       breaks = c("rpt_date_cases", "rpt_date_dph_cases", "test_date_cases", "none"),
                        values = c("rpt_date_cases" = "#E7B800", 
+                                  "rpt_date_dph_cases" = "#778A35",
                                   "test_date_cases" = "#FC4E07", 
                                   "none" = "darkgrey")) +
-    scale_fill_manual(name = "Data used",
-                      labels = c("rpt_date_cases" = "report-date cases",
-                                 "test_date_cases" = "test-date cases",
-                                 "none" = "no cases"),
-                      breaks = c("rpt_date_cases", "test_date_cases", "none"),
+    scale_fill_manual(name = "Models",
+                      labels = c("rpt_date_cases" = "ReportCase-CSSE",
+                                 "rpt_date_dph_cases" = "ReportCase-DPH",
+                                 "test_date_cases" = "TestCase",
+                                 "none" = "HospOnly"),
+                      breaks = c("rpt_date_cases", "rpt_date_dph_cases", "test_date_cases", "none"),
                       values = c("rpt_date_cases" = "#E7B800", 
+                                 "rpt_date_dph_cases" = "#778A35",
                                  "test_date_cases" = "#FC4E07", 
                                  "none" = "darkgrey")) +
     ggtitle(paste(abbr_to_name(toupper(state)), "hospitalization data and forecasts:", forecast_date))
   
+  if(state=="ca") {
+    hosp_plot <- hosp_plot +
+      geom_line(data = filter(rptdate_dph_forecast_data, target_variable == "inc hosp"),
+                aes(x=target_end_date, y=q0.5, color=data_type), size=1.5, alpha=.7) +
+      geom_ribbon(data = filter(rptdate_dph_forecast_data, target_variable == "inc hosp"),
+                  aes(x=target_end_date, ymin=q0.1, ymax=q0.9, fill=data_type), alpha=.3, size=0)
+  }
   cowplot::plot_grid(case_plot, hosp_plot, nrow=2, align="v")
   
 }
 
-
-ca1 <- plot_case_hosp_forecasts(forecast_date = "2021-07-12", state="ca")
-ca2 <- plot_case_hosp_forecasts(forecast_date = "2021-07-19", state="ca")
-ca3 <- plot_case_hosp_forecasts(forecast_date = "2021-07-26", state="ca")
-
-ma1 <- plot_case_hosp_forecasts(forecast_date = "2021-07-12", state="ma")
-ma2 <- plot_case_hosp_forecasts(forecast_date = "2021-07-19", state="ma")
-ma3 <- plot_case_hosp_forecasts(forecast_date = "2021-07-26", state="ma")
-ma4 <- plot_case_hosp_forecasts(forecast_date = "2022-05-30", state="ma")
-
-pdf(file = "plots/ca-202107.pdf", height=15, width=8)
-cowplot::plot_grid(ca1, ca2, ca3, nrow=3)
-cowplot::plot_grid(ma1, ma2, ma3, nrow=3)
-dev.off()
-
-
-forecast_dates <- as.character(seq.Date(as.Date("2020-12-07"), as.Date("2022-05-30"), by="7 days")) # c("2021-07-12", "2021-07-19", "2021-07-26")
-states <- c("ca", "ma")
-pdf(file = "plots/all-dates.pdf", height=5, width=8)
-for (state in states){
-  for(forecast_date in forecast_dates){
-    print(plot_case_hosp_forecasts(forecast_date = forecast_date, state=state))
-  }
-}
-dev.off()
