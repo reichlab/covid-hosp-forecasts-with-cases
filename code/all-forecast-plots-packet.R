@@ -17,7 +17,7 @@ dev.off()
 
 forecast_dates <- as.character(seq.Date(as.Date("2020-12-07"), as.Date("2022-05-30"), by="7 days")) # c("2021-07-12", "2021-07-19", "2021-07-26")
 states <- c("ca", "ma")
-pdf(file = "plots/all-dates.pdf", height=5, width=8)
+pdf(file = "plots/all-dates-data-and-forecasts.pdf", height=5, width=8)
 for (state in states){
   for(forecast_date in forecast_dates){
     print(plot_case_hosp_forecasts(forecast_date = forecast_date, state=state))
