@@ -471,32 +471,39 @@ p_wis_by_fc_date
 dev.off()
 
 # final selection of models ----
+options(pillar.sigfig=4)
 sarix_mean_scores <- mean_scores %>%
-    dplyr::filter(!is.na(case_type)) %>%
-    dplyr::group_by(location) %>%
-    dplyr::mutate(rank = row_number())
+  dplyr::filter(!is.na(case_type)) %>%
+  dplyr::filter(case_type=="none" | smooth_case=="True") %>%
+  dplyr::group_by(location) %>%
+  dplyr::mutate(rank = row_number())
+
+## how many models (with smooth input data) in validation period
+sarix_mean_scores %>%
+  group_by(location) %>%
+  summarize(total_models = n())
+# # A tibble: 2 × 2
+# location total_models
+# <chr>           <int>
+# 1 06                224
+# 2 25                168
 
 # select best model within each combination of case_type and smooth_case options
 sarix_mean_scores %>%
-    dplyr::group_by(location, case_type, case_source, smooth_case) %>%
-    dplyr::slice_min(wis) %>%
-    dplyr::arrange(wis) %>%
-    dplyr::select(-model)
+  dplyr::group_by(location, case_type, case_source, smooth_case) %>%
+  dplyr::slice_min(wis) %>%
+  dplyr::arrange(wis) %>%
+  dplyr::select(-model)
 
 # Output is:
-# # A tibble: 12 × 12
-# # Groups:   location, case_type, case_source, smooth_case [12]
-#    location   wis   mae coverage_95 case_type case_source smooth_case p     d     P     D      rank
-#    <chr>    <dbl> <dbl>       <dbl> <chr>     <chr>       <chr>       <chr> <chr> <chr> <chr> <int>
-#  1 25        17.2  26.5       0.989 test      dph         True        1     0     1     1         1
-#  2 25        17.4  25.1       0.984 test      dph         False       3     0     1     1         2
-#  3 25        18.6  27.4       0.984 report    jhu-csse    True        4     1     0     0        16
-#  4 25        18.7  28.2       0.970 report    jhu-csse    False       1     0     1     1        19
-#  5 25        19.6  28.7       0.972 none      jhu-csse    False       1     0     1     1        32
-#  6 06       105.  159.        0.977 test      dph         True        2     0     0     1         1
-#  7 06       107.  173.        0.994 test      dph         False       4     1     1     0         3
-#  8 06       114.  173.        0.997 report    jhu-csse    True        4     1     0     0        14
-#  9 06       115.  172.        0.994 report    dph         True        4     1     0     0        16
-# 10 06       122.  191.        0.997 report    jhu-csse    False       1     0     0     1        24
-# 11 06       122.  199.        0.987 report    dph         False       1     1     2     0        25
-# 12 06       125.  204.        0.992 none      jhu-csse    False       1     1     1     0        36
+# # A tibble: 7 × 12
+# # Groups:   location, case_type, case_source, smooth_case [7]
+# location    wis    mae coverage_95 case_type case_source smooth_case p     d     P     D      rank
+# <chr>     <dbl>  <dbl>       <dbl> <chr>     <chr>       <chr>       <chr> <chr> <chr> <chr> <int>
+# 1 25        17.19  26.54      0.9887 test      dph         True        1     0     1     1         1
+# 2 25        18.58  27.37      0.9844 report    jhu-csse    True        4     1     0     0         8
+# 3 25        19.55  28.70      0.9717 none      jhu-csse    False       1     0     1     1        16
+# 4 06       104.8  159.4       0.9773 test      dph         True        2     0     0     1         1
+# 5 06       114.1  172.8       0.9972 report    jhu-csse    True        4     1     0     0         6
+# 6 06       115.4  171.9       0.9943 report    dph         True        4     1     0     0         8
+# 7 06       124.8  203.7       0.9915 none      jhu-csse    False       1     1     1     0        18
