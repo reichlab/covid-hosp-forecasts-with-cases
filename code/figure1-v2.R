@@ -59,7 +59,7 @@ ca_data <- ca_case_report_jhu %>%
                                "Cases")) %>%
   dplyr::mutate(facet_title = "California Observations")
 
-p1_1_ma <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = Data, group = desc(Data))) +
+p1_1_ma <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = Data, group = desc(Data), shape=Data)) +
   geom_line(data = dplyr::filter(ma_data, Data %in% c("smooth JHU report-date cases", "smooth DPH test-date cases", "hospitalizations"))) + 
   geom_point(data = dplyr::filter(ma_data, Data %in% c("report-date cases", "test-date cases")), alpha=.2) + 
   geom_vline(xintercept = as.numeric(validation_test_split),
@@ -71,11 +71,16 @@ p1_1_ma <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = D
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   annotate("text", x=validation_date, y=65000, label= "Validation Period", size = 3,hjust = -0.1) + 
   annotate("text", x=validation_test_split, y=65000, label= "Test Period", size = 3,hjust = -0.1) + 
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
-                                "report-date cases" = "#E7B800", 
-                                "smooth JHU report-date cases" = "#E7B800", 
-                                "smooth DPH test-date cases" = "#FC4E07",
-                                "test-date cases" = "#FC4E07")) +
+  scale_color_manual(values = c("hospitalizations"= "#ff7f00", 
+                                "report-date cases" = "#1f78b4", 
+                                "smooth JHU report-date cases" = "#1f78b4", 
+                                "smooth DPH test-date cases" = "#33a02c",
+                                "test-date cases" = "#33a02c")) +
+  scale_shape_manual(values = c("hospitalizations"= 15, 
+                                "report-date cases" = 17, 
+                                "smooth JHU report-date cases" = 17, 
+                                "smooth DPH test-date cases" = 18,
+                                "test-date cases" = 18)) +
   scale_y_log10(name = "Reported Cases\n (log scale)", labels = scales::comma,
                 # this is decided manually 
                 sec.axis = sec_axis(~(.*1/15), labels = scales::comma,
@@ -87,14 +92,18 @@ p1_1_ma <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = D
   theme(axis.text.x = element_blank(),
         axis.ticks.x  = element_blank(),
         axis.title.x  = element_blank(),
-        axis.ticks.y.right = element_line(color = "#00AFBB"),
-        axis.line.y.right = element_line(color = "#00AFBB"),
-        axis.text.y.right = element_text(color = "#00AFBB"),
+        axis.ticks.y.right = element_line(color = "#ff7f00"),
+        axis.line.y.right = element_line(color = "#ff7f00"),
+        axis.text.y.right = element_text(color = "#ff7f00"),
         legend.position = "none",
         text = element_text(size = 10),
         plot.margin = unit(c(2, 5, -1, 5), "pt"))
 
-p1_3_ca <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = Data, group = desc(Data))) +
+p1_3_ca <- ggplot2::ggplot(mapping=aes(x = target_end_date, 
+                                       y = value, 
+                                       color = Data, 
+                                       shape = Data,
+                                       group = desc(Data))) +
   geom_line(data = dplyr::filter(ca_data, Data %in% c("smooth JHU report-date cases", "smooth DPH test-date cases", "smooth CA DPH report-date cases", "hospitalizations"))) + 
   geom_point(data = dplyr::filter(ca_data, Data %in% c("report-date cases", "test-date cases", "CA DPH report-date cases")), alpha=.2) +  
   geom_vline(xintercept = as.numeric(validation_test_split),
@@ -106,13 +115,18 @@ p1_3_ca <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = D
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   annotate("text", x=validation_date, y=300000, label= "Validation Period", size = 3,hjust = -0.1) + 
   annotate("text", x=validation_test_split, y=300000, label= "Test Period", size = 3,hjust = -0.1) +
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
-                                "report-date cases" = "#E7B800", 
-                                "test-date cases" = "#FC4E07", 
-                                "smooth JHU report-date cases" = "#E7B800", 
-                                "smooth DPH test-date cases" = "#FC4E07",
-                                "smooth CA DPH report-date cases" = "#778A35",
-                                "CA DPH report-date cases" = "#778A35")) +
+  scale_color_manual(values = c("hospitalizations"= "#ff7f00", 
+                                "report-date cases" = "#1f78b4", 
+                                "test-date cases" = "#33a02c", 
+                                "smooth JHU report-date cases" = "#1f78b4", 
+                                "smooth DPH test-date cases" = "#33a02c",
+                                "smooth CA DPH report-date cases" = "#6a3d9a",
+                                "CA DPH report-date cases" = "#6a3d9a")) +
+  scale_shape_manual(values = c("hospitalizations"= 15, 
+                                "report-date cases" = 17, 
+                                "smooth JHU report-date cases" = 17, 
+                                "smooth DPH test-date cases" = 18,
+                                "test-date cases" = 18)) +
   scale_y_log10(name = "Reported Cases\n (log scale)", 
                 labels = scales::comma,
                 sec.axis = sec_axis(~(.*1/15), labels = scales::comma,
@@ -124,9 +138,9 @@ p1_3_ca <- ggplot2::ggplot(mapping=aes(x = target_end_date, y = value, color = D
   theme(axis.text.x = element_blank(),
         axis.ticks.x  = element_blank(),
         axis.title.x  = element_blank(),
-        axis.ticks.y.right = element_line(color = "#00AFBB"),
-        axis.line.y.right = element_line(color = "#00AFBB"),
-        axis.text.y.right = element_text(color = "#00AFBB"),
+        axis.ticks.y.right = element_line(color = "#ff7f00"),
+        axis.line.y.right = element_line(color = "#ff7f00"),
+        axis.text.y.right = element_text(color = "#ff7f00"),
         plot.title = element_text(vjust = - 10),
         legend.position = "none",
         plot.margin = unit(c(0, 5, -1, 5), "pt"),
@@ -157,7 +171,7 @@ ca_data_rel_inc_7d <- ca_data %>%
 
 # rel_inc figure
 p_growth_ma <- ggplot(data = ma_data_rel_inc_7d, 
-                   aes(x = target_end_date, color = Data)) +
+                   aes(x = target_end_date, color = Data, shape = Data)) +
   geom_line(aes(y=smooth_rel_inc_7d)) +
   geom_point(aes(y = rel_inc_7d), alpha=.1) +
   geom_hline(yintercept=1, linetype=2, alpha=.7) +
@@ -173,9 +187,12 @@ p_growth_ma <- ggplot(data = ma_data_rel_inc_7d,
                                     name = "")
                 )+
   theme_bw() +
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
-                                "smooth JHU report-date cases" = "#E7B800", 
-                                "smooth DPH test-date cases" = "#FC4E07")) +
+  scale_color_manual(values = c("hospitalizations"= "#ff7f00", 
+                                "smooth JHU report-date cases" = "#1f78b4", 
+                                "smooth DPH test-date cases" = "#33a02c")) +
+  scale_shape_manual(values = c("hospitalizations"= 15, 
+                                "smooth JHU report-date cases" = 17, 
+                                "smooth DPH test-date cases" = 18)) +
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   scale_x_date(name=NULL, 
                date_breaks = "1 month", 
@@ -191,7 +208,10 @@ p_growth_ma <- ggplot(data = ma_data_rel_inc_7d,
         plot.margin = unit(c(0, 5, -1, 5), "pt"))
 
 p_growth_ca <- ggplot(data = ca_data_rel_inc_7d, 
-                      aes(x = target_end_date, y = rel_inc_7d, color = Data)) +
+                      aes(x = target_end_date, 
+                          y = rel_inc_7d, 
+                          color = Data, 
+                          shape = Data)) +
   geom_line(aes(y=smooth_rel_inc_7d)) +
   geom_point(alpha=.1) +
   geom_hline(yintercept=1, linetype=2, alpha=.7) +
@@ -206,17 +226,22 @@ p_growth_ca <- ggplot(data = ca_data_rel_inc_7d,
                                     breaks = NULL,
                                     name = ""))+
   theme_bw() +
-  scale_color_manual(values = c("hospitalizations"= "#00AFBB", 
-                                "smooth JHU report-date cases" = "#E7B800", 
-                                "smooth DPH test-date cases" = "#FC4E07",
-                                "smooth CA DPH report-date cases" = "#778A35")) +
+  scale_color_manual(values = c("hospitalizations"= "#ff7f00", 
+                                "smooth JHU report-date cases" = "#1f78b4", 
+                                "smooth DPH test-date cases" = "#33a02c",
+                                "smooth CA DPH report-date cases" = "#6a3d9a")) +
+  scale_shape_manual(values = c("hospitalizations"= 15, 
+                                "smooth JHU report-date cases" = 17, 
+                                "smooth DPH test-date cases" = 18,
+                                "smooth CA DPH report-date cases" = 17)) +
   facet_wrap(facet_title ~., scales = "free_y", nrow = 1) +
   scale_x_date(name=NULL, 
                date_breaks = "1 month", 
                date_labels = "%b %Y", 
-               limits = c(analysis_start_date, as_of_date),
+               limits = c(analysis_start_date, as_of_date-10),
                expand=c(0.02,0.02)) +
   #coord_cartesian(ylim=c(0.5, 2.5)) +
+  guides(shape = guide_legend(override.aes = list(alpha = .7))) +
   theme(legend.position = "bottom",
         axis.text.x=element_text(angle=90, hjust=0.5, vjust = 2.5),
         plot.title = element_text(vjust = - 10),

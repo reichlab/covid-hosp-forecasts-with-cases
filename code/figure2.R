@@ -44,7 +44,7 @@ ca_case_report_dph <- readr::read_csv("csv-data/combined_data_ca_report_dph.csv"
                 `smooth CA DPH report-date cases` = corrected_case_7da)
 
 
-####figure for raw data####
+#### figure for ccfs with smooth data, entire dataset ####
 ma_data <- ma_case_report %>%
   dplyr::left_join(ma_case_test, by = "target_end_date")
 
@@ -99,9 +99,10 @@ p2 <- ggplot(data = both_ccf,
        aes(x = lag, y = value, color = Data)) +
   geom_line() +
   theme_bw() +
-  scale_color_manual(values = c("smooth DPH test-date cases" = "#FC4E07",
-                                "smooth JHU report-date cases" = "#E7B800", 
-                                "smooth CA DPH report-date cases" = "#778A35"))+
+  scale_color_manual(name = "Case Data Source",
+                     values = c("smooth DPH test-date cases" = "#33a02c",
+                                "smooth JHU report-date cases" = "#1f78b4", 
+                                "smooth CA DPH report-date cases" = "#6a3d9a"))+
   geom_vline(aes(xintercept=0), linetype="solid", color = "darkgrey")+
   geom_segment(aes(x=xint, y = 0, xend= xint, yend = max_ccf), 
                 data=vertical_line_layer, linetype="dashed")+
@@ -116,9 +117,22 @@ p2 <- ggplot(data = both_ccf,
         plot.margin = unit(c(2, 5, 1, 5), "pt")) +
   facet_wrap(location ~., scales = "free_y", nrow = 2) 
 
-ggsave('figures/fig2_smooth_ccfs.jpeg',dpi=300, width=8, height=8)
+ggsave('figures/fig2_smooth_ccfs.jpeg',dpi=300, width=9, height=8)
 
 
+####  ccfs stratified by wave   ####
 
+ma_case_report_hosp_ccf <- broom::tidy(ccf(ma_data$`smooth JHU report-date cases`,
+                                           ma_data$hospitalizations,
+                                           na.action=na.omit, plot = FALSE)) %>%
+  dplyr::rename(`smooth JHU report-date cases` = acf)
 
+ma_case_test_hosp_ccf <- broom::tidy(ccf(ma_data$`smooth DPH test-date cases`, 
+                                         ma_data$hospitalizations,
+                                         na.action=na.omit, plot = FALSE)) %>%
+  dplyr::rename(`smooth DPH test-date cases` = acf)
+
+ma_ccf <- dplyr::full_join(ma_case_report_hosp_ccf, ma_case_test_hosp_ccf, by = "lag") %>%
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") %>%
+  dplyr::mutate(location = "Massachusetts")
 

@@ -148,8 +148,8 @@ mean_scores_by_hzn <- scores %>%
 p_wis_by_hzn <- ggplot(mean_scores_by_hzn, aes(x=as.numeric(horizon), y=wis, color=model_brief)) + 
   geom_line() + 
   geom_point(aes(shape = model_brief)) + 
-  facet_wrap(.~location_name, ncol=1, scales="free_y") + 
-  ylab("Average WIS") +
+  facet_wrap(.~fct_rev(location_name), ncol=1, scales="free_y") + 
+  ylab("Mean WIS") +
   scale_x_continuous(name="forecast horizon (days)", breaks=c(0, 7, 14, 21, 28)) +
   scale_color_manual(name = "model", 
                      labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
@@ -160,10 +160,10 @@ p_wis_by_hzn <- ggplot(mean_scores_by_hzn, aes(x=as.numeric(horizon), y=wis, col
                                 "report_jhu-csse_smooth_case_True", 
                                 "report_dph_smooth_case_True", 
                                 "test_dph_smooth_case_True"),
-                     values = c("none_jhu-csse_smooth_case_False"= "darkgrey", 
-                                "report_dph_smooth_case_True" = "#778A35", 
-                                "report_jhu-csse_smooth_case_True" = "#E7B800", 
-                                "test_dph_smooth_case_True" = "#FC4E07")) +
+                     values = c("none_jhu-csse_smooth_case_False"= "#ff7f00", 
+                                "report_dph_smooth_case_True" = "#6a3d9a", 
+                                "report_jhu-csse_smooth_case_True" = "#1f78b4", 
+                                "test_dph_smooth_case_True" = "#33a02c")) +
   scale_shape_manual(name = "model", 
                      labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
                                 "report_dph_smooth_case_True" = "ReportCase-DPH",
@@ -325,8 +325,8 @@ mean_scores_by_forecast_date <- scores %>%
 p <- ggplot(mean_scores_by_forecast_date) +
   geom_point(mapping = aes(x = forecast_date, y = wis, color = model_brief, fill=model_brief, shape=model_brief)) +
   geom_line(mapping = aes(x = forecast_date, y = wis, color = model_brief)) +
-  facet_wrap( ~ location_name, ncol = 1, scales = "free_y") +
-  ylab("Average WIS") +
+  facet_wrap( ~ fct_rev(location_name), ncol = 1, scales = "free_y") +
+  ylab("Mean WIS") +
   scale_x_date(NULL, 
                date_breaks = "1 month", 
                date_labels = "%b '%y",
@@ -340,10 +340,10 @@ p <- ggplot(mean_scores_by_forecast_date) +
                                 "report_jhu-csse_smooth_case_True", 
                                 "report_dph_smooth_case_True", 
                                 "test_dph_smooth_case_True"),
-                     values = c("none_jhu-csse_smooth_case_False"= "darkgrey", 
-                                "report_dph_smooth_case_True" = "#778A35", 
-                                "report_jhu-csse_smooth_case_True" = "#E7B800", 
-                                "test_dph_smooth_case_True" = "#FC4E07")) +
+                     values = c("none_jhu-csse_smooth_case_False"= "#ff7f00", 
+                                "report_dph_smooth_case_True" = "#6a3d9a", 
+                                "report_jhu-csse_smooth_case_True" = "#1f78b4", 
+                                "test_dph_smooth_case_True" = "#33a02c")) +
   scale_shape_manual(name = "model", 
                      labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
                                 "report_dph_smooth_case_True" = "ReportCase-DPH",
@@ -366,10 +366,10 @@ p <- ggplot(mean_scores_by_forecast_date) +
                                 "report_jhu-csse_smooth_case_True", 
                                 "report_dph_smooth_case_True", 
                                 "test_dph_smooth_case_True"),
-                     values = c("none_jhu-csse_smooth_case_False"= "darkgrey", 
-                                "report_dph_smooth_case_True" = "#778A35", 
-                                "report_jhu-csse_smooth_case_True" = "#E7B800", 
-                                "test_dph_smooth_case_True" = "#FC4E07")) +
+                    values = c("none_jhu-csse_smooth_case_False"= "#ff7f00", 
+                               "report_dph_smooth_case_True" = "#6a3d9a", 
+                               "report_jhu-csse_smooth_case_True" = "#1f78b4", 
+                               "test_dph_smooth_case_True" = "#33a02c")) +
   theme_bw() +
   theme(axis.ticks.length.x = unit(0.5, "cm"), 
         axis.text.x = element_text(vjust = 7, hjust = -0.2),

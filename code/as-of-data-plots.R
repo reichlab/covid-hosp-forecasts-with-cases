@@ -162,10 +162,13 @@ plot_as_of_case_data <- function(final_date = "2022-07-26",
   incomplete_data_window <- ifelse(state=="ma", 3.5, 7.5)
   
   p <- ggplot(mapping = aes(x=date)) +
-    ## as of data lines
-    geom_point(data = as_of_data, aes(y=value, color=data_type), alpha=.5) +
-    ## final data lines 
-    geom_point(data = final_data, aes(y=value, color=data_type), alpha=0.5, shape=1) +
+    ## as of data points
+    geom_point(data = as_of_data, aes(y=value, color=data_type, shape=data_type), alpha=.5) +
+    ## final data points 
+    geom_point(data = filter(final_data, data_type == "rpt_date_cases"), 
+               aes(y=value, color=data_type, shape = "rpt_date_cases_open")) +
+    geom_point(data = filter(final_data, data_type =="test_date_cases"),
+               aes(y=value, color=data_type, shape = "test_date_cases_open")) +
     ## as_of smoothed data lines
     geom_line(data = as_of_data_smooth, aes(y=value, color=data_type), alpha=.6) +
     ## final smoothed data lines
@@ -189,13 +192,20 @@ plot_as_of_case_data <- function(final_date = "2022-07-26",
     scale_color_manual(labels = c("rpt_date_cases" = "report-date cases",
                                   "test_date_cases" = "test-date cases"),
                        breaks = c("rpt_date_cases", "test_date_cases"),
-                       values = c("rpt_date_cases" = "#E7B800", 
-                                  "test_date_cases" = "#FC4E07")) +
+                       values = c("rpt_date_cases" = "#1f78b4", 
+                                  "test_date_cases" = "#33a02c")) +
     scale_fill_manual(labels = c("rpt_date_cases" = "report-date cases",
                                  "test_date_cases" = "test-date cases"),
                       breaks = c("rpt_date_cases", "test_date_cases"),
-                      values = c("rpt_date_cases" = "#E7B800", 
-                                 "test_date_cases" = "#FC4E07")) +
+                      values = c("rpt_date_cases" = "#1f78b4", 
+                                 "test_date_cases" = "#33a02c")) +
+    scale_shape_manual(labels = c("rpt_date_cases" = "report-date cases",
+                                  "test_date_cases" = "test-date cases"),
+                       breaks = c("rpt_date_cases", "test_date_cases"),
+                       values = c("rpt_date_cases_open" = 2,
+                                  "test_date_cases_open" = 5,
+                                  "rpt_date_cases" = 17,
+                                  "test_date_cases" = 18)) +
     ## scale_color_brewer(palette = "Dark2") +
     ## scale_fill_brewer(palette = "Dark2") +
     ggtitle(paste(abbr_to_name(toupper(state)), "case data as of:", as_of_date))
