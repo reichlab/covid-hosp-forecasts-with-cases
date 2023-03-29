@@ -507,3 +507,50 @@ sarix_mean_scores %>%
 # 5 06       114.1  172.8       0.9972 report    jhu-csse    True        4     1     0     0         6
 # 6 06       115.4  171.9       0.9943 report    dph         True        4     1     0     0         8
 # 7 06       124.8  203.7       0.9915 none      jhu-csse    False       1     1     1     0        18
+
+
+# final selection of models including unsmoothed data for supplement ----
+options(digits=2)
+sarix_mean_scores_w_unsmth <- mean_scores %>%
+  dplyr::filter(!is.na(case_type)) %>%
+  dplyr::group_by(location) %>%
+  dplyr::mutate(rank = row_number())
+
+## how many models (with smooth input data) in validation period
+sarix_mean_scores_w_unsmth %>%
+  group_by(location) %>%
+  summarize(total_models = n())
+# # A tibble: 2 × 2
+# location total_models
+# <chr>           <int>
+# 1 06                224
+# 2 25                168
+
+# select best model within each combination of case_type and smooth_case options
+sarix_mean_scores_w_unsmth %>%
+  dplyr::group_by(location, case_type, case_source, smooth_case) %>%
+  dplyr::slice_min(wis) %>%
+  dplyr::arrange(wis) %>%
+  dplyr::select(-model) %>%
+  dplyr::mutate(pdPD = paste(p, d, P, D, sep=",")) %>%
+  dplyr::select(location, case_source, case_type, smooth_case, pdPD, wis, mae, coverage_95, rank)
+
+## Output: 
+
+# A tibble: 12 × 9
+# Groups:   location, case_type, case_source, smooth_case [12]
+# location case_source case_type smooth_case pdPD       wis    mae coverage_95  rank
+# <chr>    <chr>       <chr>     <chr>       <chr>    <dbl>  <dbl>       <dbl> <int>
+#   1 25       dph         test      True        1,0,1,1  17.19  26.54      0.9887     1
+# 2 25       dph         test      False       3,0,1,1  17.36  25.07      0.9844     2
+# 3 25       jhu-csse    report    True        4,1,0,0  18.58  27.37      0.9844    16
+# 4 25       jhu-csse    report    False       1,0,1,1  18.70  28.21      0.9703    19
+# 5 25       jhu-csse    none      False       1,0,1,1  19.55  28.70      0.9717    32
+# 6 06       dph         test      True        2,0,0,1 104.8  159.4       0.9773     1
+# 7 06       dph         test      False       4,1,1,0 107.5  172.7       0.9943     3
+# 8 06       jhu-csse    report    True        4,1,0,0 114.1  172.8       0.9972    14
+# 9 06       dph         report    True        4,1,0,0 115.4  171.9       0.9943    16
+# 10 06       jhu-csse    report    False       1,0,0,1 121.8  191.1       0.9972    24
+# 11 06       dph         report    False       1,1,2,0 122.5  199.0       0.9873    25
+# 12 06       jhu-csse    none      False       1,1,1,0 124.8  203.7       0.9915    36
+
