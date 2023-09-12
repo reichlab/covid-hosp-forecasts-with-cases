@@ -317,14 +317,15 @@ mean_scores_by_forecast_date <- scores %>%
   filter(!(model_brief %in%  c("COVIDhub-4_week_ensemble", "COVIDhub-baseline"))) %>%
   dplyr::group_by(model_brief, forecast_date, location) %>%
   dplyr::summarize(
-    wis = mean(wis),
+    mean_wis = mean(wis),
+    med_wis = median(wis),
     mae = mean(abs_error)
   ) %>%
   left_join(covidHubUtils::hub_locations, by= c("location" = "fips"))
 
-p <- ggplot(mean_scores_by_forecast_date) +
-  geom_point(mapping = aes(x = forecast_date, y = wis, color = model_brief, fill=model_brief, shape=model_brief)) +
-  geom_line(mapping = aes(x = forecast_date, y = wis, color = model_brief)) +
+p_mean <- ggplot(mean_scores_by_forecast_date) +
+  geom_point(mapping = aes(x = forecast_date, y = mean_wis, color = model_brief, fill=model_brief, shape=model_brief)) +
+  geom_line(mapping = aes(x = forecast_date, y = mean_wis, color = model_brief)) +
   facet_wrap( ~ fct_rev(location_name), ncol = 1, scales = "free_y") +
   ylab("Mean WIS") +
   scale_x_date(NULL, 
@@ -376,7 +377,65 @@ p <- ggplot(mean_scores_by_forecast_date) +
         legend.position = c(0.03,0.97), legend.justification = c(0,1)) 
 
 pdf("figures/test_mean_wis_by_fc_date.pdf", height = 6, width = 8)
-p
+p_mean
+dev.off()
+
+
+p_median <- ggplot(mean_scores_by_forecast_date) +
+  geom_point(mapping = aes(x = forecast_date, y = med_wis, color = model_brief, fill=model_brief, shape=model_brief)) +
+  geom_line(mapping = aes(x = forecast_date, y = med_wis, color = model_brief)) +
+  facet_wrap( ~ fct_rev(location_name), ncol = 1, scales = "free_y") +
+  ylab("Median WIS") +
+  scale_x_date(NULL, 
+               date_breaks = "1 month", 
+               date_labels = "%b '%y",
+               expand = expansion(add=1)) +
+  scale_color_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= "#ff7f00", 
+                                "report_dph_smooth_case_True" = "#6a3d9a", 
+                                "report_jhu-csse_smooth_case_True" = "#1f78b4", 
+                                "test_dph_smooth_case_True" = "#33a02c")) +
+  scale_shape_manual(name = "model", 
+                     labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                                "report_dph_smooth_case_True" = "ReportCase-DPH",
+                                "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                                "test_dph_smooth_case_True" = "TestCase-DPH"),
+                     breaks = c("none_jhu-csse_smooth_case_False",
+                                "report_jhu-csse_smooth_case_True", 
+                                "report_dph_smooth_case_True", 
+                                "test_dph_smooth_case_True"),
+                     values = c("none_jhu-csse_smooth_case_False"= 15, 
+                                "report_dph_smooth_case_True" = 16, 
+                                "report_jhu-csse_smooth_case_True" = 17, 
+                                "test_dph_smooth_case_True" = 18)) +
+  scale_fill_manual(name = "model", 
+                    labels = c("none_jhu-csse_smooth_case_False" = "HospOnly",
+                               "report_dph_smooth_case_True" = "ReportCase-DPH",
+                               "report_jhu-csse_smooth_case_True" = "ReportCase-CSSE",
+                               "test_dph_smooth_case_True" = "TestCase-DPH"),
+                    breaks = c("none_jhu-csse_smooth_case_False",
+                               "report_jhu-csse_smooth_case_True", 
+                               "report_dph_smooth_case_True", 
+                               "test_dph_smooth_case_True"),
+                    values = c("none_jhu-csse_smooth_case_False"= "#ff7f00", 
+                               "report_dph_smooth_case_True" = "#6a3d9a", 
+                               "report_jhu-csse_smooth_case_True" = "#1f78b4", 
+                               "test_dph_smooth_case_True" = "#33a02c")) +
+  theme_bw() +
+  theme(axis.ticks.length.x = unit(0.5, "cm"), 
+        axis.text.x = element_text(vjust = 7, hjust = -0.2),
+        legend.position = c(0.03,0.97), legend.justification = c(0,1)) 
+
+pdf("figures/test_median_wis_by_fc_date.pdf", height = 6, width = 8)
+p_median
 dev.off()
 
 

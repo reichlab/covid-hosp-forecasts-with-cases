@@ -6,6 +6,7 @@ library(broom)
 library(forecast)
 library(grid)
 
+theme_set(theme_bw())
 
 # use all data as of 2022-07-22
 as_of_date <- as.Date("2022-07-22")
@@ -120,24 +121,185 @@ p2 <- ggplot(data = both_ccf,
 ggsave('figures/fig2_smooth_ccfs.jpeg',dpi=300, width=9, height=8)
 
 
-####  ccfs stratified by wave   ####
+####  ccfs stratified by phase   ####
 
-ma_case_report_hosp_ccf <- broom::tidy(ccf(ma_data$`smooth JHU report-date cases`,
-                                           ma_data$hospitalizations,
-                                           na.action=na.omit, plot = FALSE)) %>%
-  dplyr::rename(`smooth JHU report-date cases` = acf)
+ma_data_split <- ma_data |> 
+  mutate(target_end_date_period = ifelse(target_end_date <= validation_test_split, 
+                                         "validation", "test"))
 
-ma_case_test_hosp_ccf <- broom::tidy(ccf(ma_data$`smooth DPH test-date cases`, 
-                                         ma_data$hospitalizations,
-                                         na.action=na.omit, plot = FALSE)) %>%
-  dplyr::rename(`smooth DPH test-date cases` = acf)
+## compute ccfs on test and validation splits for report-date cases
+ma_case_report_hosp_ccf_valid <- ma_data_split |> 
+  filter(target_end_date_period == "validation") |> 
+  with(ccf(`smooth JHU report-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth JHU report-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "validation") 
 
-ma_ccf <- dplyr::full_join(ma_case_report_hosp_ccf, ma_case_test_hosp_ccf, by = "lag") %>%
-  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") %>%
+ma_case_report_hosp_ccf_test <- ma_data_split |> 
+  filter(target_end_date_period == "test") |> 
+  with(ccf(`smooth JHU report-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth JHU report-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "test")
+
+## compute ccfs on test and validation splits for test-date cases
+ma_case_test_hosp_ccf_valid <-  ma_data_split |> 
+  filter(target_end_date_period == "validation") |> 
+  with(ccf(`smooth DPH test-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth DPH test-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "validation")
+
+ma_case_test_hosp_ccf_test <-  ma_data_split |> 
+  filter(target_end_date_period == "test") |> 
+  with(ccf(`smooth DPH test-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth DPH test-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "test")
+
+
+ma_ccf <- dplyr::bind_rows(ma_case_report_hosp_ccf_valid, 
+                           ma_case_report_hosp_ccf_test, 
+                           ma_case_test_hosp_ccf_valid, 
+                           ma_case_test_hosp_ccf_test) |> 
   dplyr::mutate(location = "Massachusetts")
+## table was manually inspected for max correlations
+
+ggplot(data = ma_ccf, 
+       aes(x = lag, y = value, color = Data)) +
+  geom_line() +
+  theme_bw() +
+  scale_color_manual(name = "Case Data Source",
+                     values = c("smooth DPH test-date cases" = "#33a02c",
+                                "smooth JHU report-date cases" = "#1f78b4", 
+                                "smooth CA DPH report-date cases" = "#6a3d9a"))+
+  ylab("Cross-correlation between hospitalizations and case data source")+
+  xlab("lag, in days")+
+  ylim(0,1)+
+  theme(legend.position = "bottom",
+        text = element_text(size = 12),
+        plot.margin = unit(c(2, 5, 1, 5), "pt")) +
+  facet_wrap(period ~., scales = "free_y", nrow = 2) 
+
+## and for CA
+
+ca_data_split <- ca_data |> 
+  mutate(target_end_date_period = ifelse(target_end_date <= validation_test_split, 
+                                         "validation", "test"))
+
+## compute ccfs on test and validation splits for report-date cases
+ca_case_report_hosp_ccf_valid <- ca_data_split |> 
+  filter(target_end_date_period == "validation") |> 
+  with(ccf(`smooth JHU report-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth JHU report-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "validation") 
+
+ca_case_report_hosp_ccf_test <- ca_data_split |> 
+  filter(target_end_date_period == "test") |> 
+  with(ccf(`smooth JHU report-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth JHU report-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "test")
+
+## compute ccfs on test and validation splits for test-date cases
+ca_case_test_hosp_ccf_valid <-  ca_data_split |> 
+  filter(target_end_date_period == "validation") |> 
+  with(ccf(`smooth DPH test-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth DPH test-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "validation")
+
+ca_case_test_hosp_ccf_test <-  ca_data_split |> 
+  filter(target_end_date_period == "test") |> 
+  with(ccf(`smooth DPH test-date cases`,
+           hospitalizations,
+           na.action=na.omit, plot = FALSE)) |> 
+  broom::tidy() |> 
+  dplyr::rename(`smooth DPH test-date cases` = acf) |> 
+  tidyr::pivot_longer(!lag, names_to = "Data", values_to ="value") |> 
+  mutate(period = "test")
 
 
-## supplemental analysis using differenced data
+ca_ccf <- dplyr::bind_rows(ca_case_report_hosp_ccf_valid, 
+                           ca_case_report_hosp_ccf_test, 
+                           ca_case_test_hosp_ccf_valid, 
+                           ca_case_test_hosp_ccf_test) |> 
+  dplyr::mutate(location = "California")
+## table was manually inspected for max correlations
+
+## plot the case/hosp ratios
+
+p1 <- ggplot(ca_data_split, aes(x=target_end_date, 
+                          y=`smooth JHU report-date cases`/hospitalizations, 
+                          color=target_end_date_period)) + 
+  geom_point() + 
+  ggtitle("A: CA JHU report-date cases to hospitalization ratio") +
+  xlab(NULL) + ylab("# reported cases per hospitalization") +
+  geom_vline(aes(xintercept = validation_test_split)) +
+  theme(legend.position = "none")
+
+p2 <- ggplot(ma_data_split, aes(x=target_end_date, 
+                          y=`smooth JHU report-date cases`/hospitalizations, 
+                          color=target_end_date_period, 
+                          shape = target_end_date_period)) + 
+  geom_point() + 
+  ggtitle("C: MA JHU report-date cases to hospitalization ratio") +
+  xlab(NULL) + ylab("# reported cases per hospitalization") +
+  geom_vline(aes(xintercept = validation_test_split)) +
+  theme(legend.position = "none")
+
+p3 <- ggplot(ca_data_split, aes(x=`smooth JHU report-date cases`, 
+                          y=hospitalizations, 
+                          color=target_end_date_period, 
+                          shape = target_end_date_period,
+                          linetype = target_end_date_period)) + 
+  ggtitle("B: CA correlation of cases and hospitalization") +
+  geom_point(alpha=.3) +
+  scale_x_log10() + scale_y_log10() + 
+  geom_smooth(method="lm", se=FALSE) +
+  theme(legend.position = "none")
+
+p4 <- ggplot(ma_data_split, aes(x=`smooth JHU report-date cases`, 
+                          y=hospitalizations, 
+                          color=target_end_date_period, 
+                          shape = target_end_date_period,
+                          linetype = target_end_date_period)) + 
+  geom_point(alpha=.3) +
+  ggtitle("D: MA correlation of cases and hospitalization") +
+  scale_x_log10() + scale_y_log10() + 
+  geom_smooth(method="lm", se=FALSE) +
+  theme(legend.position = c(0.9,0.1), 
+        legend.justification = c(0.9,0.1),
+        legend.title = element_blank())
+
+
+p_all <- gridExtra::grid.arrange(p1, p3, p2, p4, nrow=2)
+ggsave('figures/supp_cases_v_hosps.pdf', plot = p_all, width=9, height=6)
+
+
+#### supplemental analysis using differenced data ####
 
 ma_case_test_diff <- ma_case_test %>%
   mutate(`test-date cases` = `test-date cases` - lag(`test-date cases`, 1),
