@@ -253,9 +253,10 @@ ca_ccf <- dplyr::bind_rows(ca_case_report_hosp_ccf_valid,
 
 p1 <- ggplot(ca_data_split, aes(x=target_end_date, 
                           y=`smooth JHU report-date cases`/hospitalizations, 
-                          color=target_end_date_period)) + 
+                          color=target_end_date_period, 
+                          shape = target_end_date_period)) + 
   geom_point() + 
-  ggtitle("A: CA JHU report-date cases to hospitalization ratio") +
+  ggtitle("A: CA JHU report-date cases to hosps ratio") +
   xlab(NULL) + ylab("# reported cases per hospitalization") +
   geom_vline(aes(xintercept = validation_test_split)) +
   theme(legend.position = "none")
@@ -265,7 +266,7 @@ p2 <- ggplot(ma_data_split, aes(x=target_end_date,
                           color=target_end_date_period, 
                           shape = target_end_date_period)) + 
   geom_point() + 
-  ggtitle("C: MA JHU report-date cases to hospitalization ratio") +
+  ggtitle("C: MA JHU report-date cases to hosps ratio") +
   xlab(NULL) + ylab("# reported cases per hospitalization") +
   geom_vline(aes(xintercept = validation_test_split)) +
   theme(legend.position = "none")
