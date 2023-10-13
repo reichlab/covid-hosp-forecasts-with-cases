@@ -1,0 +1,82 @@
+---
+title: "create_submission_file"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load Libraries
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(covidHubUtils)
+library(fpp3)
+library(fable)
+library(DT)
+source("to_submission_df.R")
+```
+
+# Set some global parameters for analysis
+
+```{r}
+hosp_data_start_date <- as.Date("2020-08-01")
+forecast_date <- "2020-11-20"
+```
+
+# Load and clean truth data 
+
+This code builds "truth" dataset for hospitalizations that goes up through the `forecast_date` specified above (`r forecast_date`)..
+
+```{r, message=FALSE, warning=FALSE}
+hosp_truth <- load_truth(
+  truth_source = "HealthData",
+  target_variable = "inc hosp",
+  locations = "25") %>% 
+  filter(target_end_date <= forecast_date, target_end_date >= hosp_data_start_date)
+```
+
+Turn the truth data above into `tsibbles` and standardize column names.
+
+```{r}
+ts_hosp <- hosp_truth %>%
+  as_tsibble() %>% 
+  select(target_end_date, hosp_val = value) %>% 
+  tsibble::fill_gaps()
+```
+
+# Define fourth-root transformation
+```{r}
+# define transformation and inverse of transformation
+fourth_rt<- function(x) {x^(1/4)}
+truncated_inv_fourth_rt <- function(x){
+  pmax(0,x)^4
+}
+fourth_rt_transformation <- new_transformation(fourth_rt, truncated_inv_fourth_rt)
+```
+# Make forecast
+```{r}
+#write model for ARIMA with only hospitalizations 
+fourth_rt_fit <- ts_hosp %>%
+  filter(target_end_date >= hosp_data_start_date, 
+         target_end_date <= forecast_date) %>%
+  model(ARIMA(fourth_rt_transformation(hosp_val))) 
+  
+report(fourth_rt_fit)
+
+fourth_rt_forecast <- fourth_rt_fit %>% 
+  forecast(h=28, point_forecast = list(.mean = mean, .median = median))
+  
+```
+# Create submission file
+```{r}
+submission_df = to_submission_df(fourth_rt_forecast, forecast_date = forecast_date)
+
+datatable(submission_df,
+  extensions = "FixedColumns",
+  options = list(
+    dom = "t", scrollX = TRUE,
+    fixedColumns = list(leftColumns = 2)
+  )
+)
+```
